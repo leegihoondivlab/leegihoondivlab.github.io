@@ -5,6 +5,7 @@
   1. 메인 비전: 교통, 의료, 치안 등 B2B 확장성 및 주식시장(First Target) 명시
   2. 넷플릭스형 런처 다운로드 및 PC 사양(똥컴 방지) 명확한 사전 고지
   3. 마이룸(My Room): 최대 6개 종목/평단가 사전 등록 및 오토 에임(자동 재단) 지원
+  4. (업데이트) 런처 실행 시 주소창이 없는 전문 소프트웨어 형태의 새 창 팝업 구동
 ========================================================================
 -->
 <!DOCTYPE html>
@@ -87,7 +88,6 @@
         </div>
     </header>
 
-    <!-- 1. 랜딩 페이지 (비전 선포) -->
     <div id="landing-section" class="section-container active">
         <div class="hero-title">눈에 보이는 모든 것을 정보화하여,<br>인간의 삶을 개선시킨다.</div>
         <div class="hero-subtitle">
@@ -112,7 +112,6 @@
         <button class="nav-btn primary" style="font-size: 20px; padding: 15px 40px;" onclick="showSection('auth-section')">DivLab AI 합류하기</button>
     </div>
 
-    <!-- 2. 로그인/가입 페이지 -->
     <div id="auth-section" class="section-container">
         <div class="auth-box">
             <h2 style="color:#fff; margin-bottom: 30px;">DivLab 관제탑 접속</h2>
@@ -123,48 +122,44 @@
         </div>
     </div>
 
-    <!-- 3. 마이 룸 (종목 등록 및 런처) -->
     <div id="myroom-section" class="section-container">
         <div class="room-header"><span id="user-name-display">이기훈</span> 님의 관제탑 (My Room)</div>
         <div class="room-desc">관심 종목을 등록하고 런처를 실행하면, AI가 HTS 화면을 스스로 스캔하여(Auto-Aim) 영점을 맞춥니다. 수동 재단이 필요 없습니다.</div>
         
         <div class="dashboard-grid">
-            <!-- 좌측: 최대 6개 슬롯 등록 -->
             <div class="stock-slots">
                 <div class="slot-title">
                     <span>📡 AI 감시 대상 등록 (최대 6개)</span>
                     <span style="font-size:12px; color:var(--text-muted); font-weight:normal;">* 오토 에임 자동 연동</span>
                 </div>
-                <div class="slot-list">
-                    <!-- 슬롯 1~6 -->
+                <div class="slot-list" id="stock-slots-container">
                     <div class="slot-item">
-                        <input type="text" placeholder="종목 티커 (예: TSLA)" value="TSLA">
-                        <input type="number" placeholder="나의 평단가 ($)" value="250.50">
+                        <input type="text" class="ticker-input" placeholder="종목 티커 (예: TSLA)" value="TSLA">
+                        <input type="number" class="price-input" placeholder="나의 평단가 ($)" value="250.50">
                     </div>
                     <div class="slot-item">
-                        <input type="text" placeholder="종목 티커 (예: NVDA)" value="NVDA">
-                        <input type="number" placeholder="나의 평단가 ($)" value="115.00">
+                        <input type="text" class="ticker-input" placeholder="종목 티커 (예: NVDA)" value="NVDA">
+                        <input type="number" class="price-input" placeholder="나의 평단가 ($)" value="115.00">
                     </div>
                     <div class="slot-item">
-                        <input type="text" placeholder="종목 티커 (선택)">
-                        <input type="number" placeholder="나의 평단가 (선택)">
+                        <input type="text" class="ticker-input" placeholder="종목 티커 (선택)">
+                        <input type="number" class="price-input" placeholder="평단가 (선택)">
                     </div>
                     <div class="slot-item">
-                        <input type="text" placeholder="종목 티커 (선택)">
-                        <input type="number" placeholder="나의 평단가 (선택)">
+                        <input type="text" class="ticker-input" placeholder="종목 티커 (선택)">
+                        <input type="number" class="price-input" placeholder="평단가 (선택)">
                     </div>
                     <div class="slot-item">
-                        <input type="text" placeholder="종목 티커 (선택)">
-                        <input type="number" placeholder="나의 평단가 (선택)">
+                        <input type="text" class="ticker-input" placeholder="종목 티커 (선택)">
+                        <input type="number" class="price-input" placeholder="평단가 (선택)">
                     </div>
                     <div class="slot-item">
-                        <input type="text" placeholder="종목 티커 (선택)">
-                        <input type="number" placeholder="나의 평단가 (선택)">
+                        <input type="text" class="ticker-input" placeholder="종목 티커 (선택)">
+                        <input type="number" class="price-input" placeholder="평단가 (선택)">
                     </div>
                 </div>
             </div>
 
-            <!-- 우측: 런처 다운로드 및 사양 고지 -->
             <div class="launcher-panel">
                 <div>
                     <h3 style="color:#fff; margin-top:0;">🚀 DivLab 데스크톱 런처</h3>
@@ -185,7 +180,8 @@
                 
                 <div style="display:flex; flex-direction: column;">
                     <button class="download-btn">⬇️ Windows 런처 다운로드 (V6.0)</button>
-                    <button class="run-btn" onclick="alert('브라우저에서 DivLab Launcher.exe를 엽니다.\n(오토 에임 백그라운드 구동 시작)')">▶️ 런처 웹에서 바로 실행</button>
+                    <!-- 💡 실행 버튼 클릭 시 saveAndRunLauncher() 함수를 호출 -->
+                    <button class="run-btn" onclick="saveAndRunLauncher()">▶️ 런처 웹에서 바로 실행</button>
                 </div>
             </div>
         </div>
@@ -203,6 +199,35 @@
             document.getElementById('btn-login').style.display = 'none';
             document.getElementById('btn-myroom').style.display = 'block';
             showSection('myroom-section');
+        }
+
+        function saveAndRunLauncher() {
+            const slots = document.querySelectorAll('.slot-item');
+            const myStocks = [];
+            
+            slots.forEach(slot => {
+                const ticker = slot.querySelector('.ticker-input').value.trim().toUpperCase();
+                const priceVal = slot.querySelector('.price-input').value;
+                const price = parseFloat(priceVal);
+                
+                // 티커와 평단가가 모두 입력된 슬롯만 저장 배열에 추가
+                if (ticker && !isNaN(price)) {
+                    myStocks.push({ ticker: ticker, myAvg: price });
+                }
+            });
+
+            if (myStocks.length === 0) {
+                alert("최소 1개의 관심 종목과 평단가를 입력해주세요.");
+                return;
+            }
+
+            // 브라우저의 localStorage에 JSON 형태로 저장
+            localStorage.setItem('divlab_stocks', JSON.stringify(myStocks));
+            
+            alert("VIP 설정 완료! 오토 에임을 가동하며 관제탑 런처를 실행합니다.");
+            
+            // 🚀 주소창과 메뉴바를 숨긴 독립적인 앱(App) 형태의 새 창으로 띄우기
+            window.open('board_saas.html', 'DivLabTerminal', 'width=1600,height=900,menubar=no,toolbar=no,location=no,status=no');
         }
     </script>
 </body>
