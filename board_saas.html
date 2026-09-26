@@ -1,8 +1,8 @@
 <!--
 파일명: board_saas.html
 수정 사항: 
-index.html에서 입력받은 데이터를 localStorage를 통해 불러와 
-화면에 동적으로 종목 카드를 생성하도록 자바스크립트 연동을 완료했습니다.
+기존 데모용 가짜 데이터(simulateEngine) 로직을 삭제하고,
+7_broadcast.py(로컬 API 서버)와 연결하여 실제 DB 데이터를 0.5초마다 실시간으로 화면에 렌더링하도록 완성했습니다.
 -->
 <!DOCTYPE html>
 <html lang="ko">
@@ -122,29 +122,25 @@ index.html에서 입력받은 데이터를 localStorage를 통해 불러와
         const urlParams = new URLSearchParams(window.location.search);
         const isCastWindow = urlParams.get('mode') === 'cast'; 
         
-        // 💡 1. 하드코딩 제거: 로컬 스토리지에서 고객이 등록한 종목 불러오기
         const storedStocks = JSON.parse(localStorage.getItem('divlab_stocks'));
         let activeTickers = [];
         const STOCKS = {};
 
         if (storedStocks && storedStocks.length > 0) {
-            // 마이룸에서 데이터를 넘겨받은 경우
             storedStocks.forEach(stock => {
                 activeTickers.push(stock.ticker);
                 STOCKS[stock.ticker] = {
-                    kr: stock.ticker, // 초기에는 티커명 그대로 사용 (추후 API로 한글명 매핑)
-                    price: stock.myAvg, // 런처 초기 구동 시에는 평단가를 현재가 위치에 세팅
+                    kr: stock.ticker, 
+                    price: stock.myAvg, 
                     myAvg: stock.myAvg,
                     d1: 15000, d2: 12000, d3: 8000, d4: 13000, tAvg: stock.myAvg
                 };
             });
         } else {
-            // 직접 board_saas.html 접속 시 에러 방지용 기본값
             activeTickers = ['TSLA'];
             STOCKS['TSLA'] = { kr: '테슬라', price: 370.00, myAvg: 372.00, d1: 15000, d2: 12000, d3: 8000, d4: 13000, tAvg: 371.50 };
         }
 
-        // 특정 종목 단독 송출(캐스트) 모드 확인
         if (urlParams.get('tickers') && urlParams.get('tickers') !== 'ALL') {
             activeTickers = urlParams.get('tickers').split(',');
         }
@@ -152,7 +148,6 @@ index.html에서 입력받은 데이터를 localStorage를 통해 불러와
         const isSingleMode = activeTickers.length === 1;
         if (isSingleMode) document.body.classList.add('single-mode');
 
-        // 동적 그리드 생성 (종목 개수에 따라 화면 레이아웃 자동 조절)
         let cols = activeTickers.length > 4 ? 3 : (activeTickers.length > 1 ? 2 : 1);
         let rows = Math.ceil(activeTickers.length / cols);
         if (!isSingleMode) {
@@ -286,14 +281,12 @@ index.html에서 입력받은 데이터를 localStorage를 통해 불러와
             state[id].isSignaling = true;
 
             const card = document.getElementById(`card-${id}`);
-
             card.className = 'stock-card pulse-yellow'; 
             addTrajLog(id, '⚠️', '대량 허수 호가 변동 감지');
             addHftLog(id, '특이 동향 포착 (방향성 탐색 중)'); 
 
             setTimeout(() => {
                 card.className = 'stock-card signal-yellow';
-                
                 setTimeout(() => {
                     const targetColor = actionType === 'BUY' ? 'blue' : 'red';
                     const logIcon = actionType === 'BUY' ? '🛡️' : '☠️';
@@ -306,62 +299,73 @@ index.html에서 입력받은 데이터를 localStorage를 통해 불러와
 
                     setTimeout(() => {
                         card.className = `stock-card signal-${targetColor}`;
-
                         setTimeout(() => {
                             card.className = 'stock-card';
                             state[id].isSignaling = false; 
-                        }, 30000);
-
+                        }, 5000);
                     }, 1500); 
-
-                }, 30000); 
-
+                }, 3000); 
             }, 1500); 
         }
 
-        // [주의] 본 코드는 아직 백엔드 API와 연결되지 않은 데모용 UI 시뮬레이터입니다.
-        function simulateEngine() {
-            const now = new Date();
-            activeTickers.forEach(id => {
-                const stock = STOCKS[id];
-                const s = state[id];
+        // 💡 [핵심] 실제 DB 실시간 연동 로직 (7_broadcast.py 호출)
+        async function fetchRealtimeData() {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/live');
+                if (!response.ok) return;
+                const data = await response.json();
                 
-                s.currentPrice += (Math.random() - 0.5) * 0.8; 
-                
-                const priceEl = document.getElementById(`price-${id}`);
-                priceEl.innerText = `$${s.currentPrice.toFixed(2)}`;
-                priceEl.style.color = s.currentPrice > stock.myAvg ? 'var(--color-up)' : 'var(--color-down)';
-                
-                const pnl = ((s.currentPrice - stock.myAvg) / stock.myAvg) * 100;
-                const pnlEl = document.getElementById(`pnl-${id}`);
-                pnlEl.innerText = `${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}%`;
-                pnlEl.style.color = pnl > 0 ? 'var(--color-up)' : 'var(--color-down)';
-
-                document.getElementById(`time-${id}`).innerText = now.toLocaleTimeString('en-US', {hour12: false}) + '.' + String(now.getMilliseconds()).padStart(3,'0').substring(0,2);
-
-                s.sellVol += Math.floor((Math.random() - 0.4) * 2000);
-                s.buyVol += Math.floor((Math.random() - 0.4) * 2000);
-                document.getElementById(`sVol-${id}`).innerText = (s.sellVol/1000).toFixed(1) + 'k';
-                document.getElementById(`bVol-${id}`).innerText = (s.buyVol/1000).toFixed(1) + 'k';
-                
-                const sellRatio = (s.sellVol / (s.sellVol + s.buyVol)) * 100;
-                document.getElementById(`vol-bar-${id}`).style.width = `${sellRatio}%`;
-
-                if (!s.isSignaling) {
-                    const rand = Math.random();
-                    if (rand > 0.99) {
-                        s.instAvg = s.currentPrice - 0.2; 
-                        document.getElementById(`inst-avg-${id}`).innerText = `$${s.instAvg.toFixed(2)}`;
-                        triggerSequence(id, 'BUY'); 
-                    } else if (rand > 0.98) {
-                        triggerSequence(id, 'SELL'); 
-                    }
+                if (data.status === 'success' && data.nodes) {
+                    const now = new Date();
+                    const timeString = now.toLocaleTimeString('en-US', {hour12: false}) + '.' + String(now.getMilliseconds()).padStart(3,'0').substring(0,2);
+                    
+                    data.nodes.forEach(node => {
+                        const roi = node.roi_name; 
+                        const val = parseFloat(node.value);
+                        
+                        const parts = roi.split('_');
+                        if (parts.length < 2) return;
+                        const id = parts[0]; 
+                        const type = parts[1].toLowerCase(); 
+                        
+                        if (activeTickers.includes(id)) {
+                            const stock = STOCKS[id];
+                            const s = state[id];
+                            
+                            document.getElementById(`time-${id}`).innerText = timeString;
+                            
+                            if (type === 'price' && !isNaN(val)) {
+                                s.currentPrice = val;
+                                const priceEl = document.getElementById(`price-${id}`);
+                                priceEl.innerText = `$${val.toFixed(2)}`;
+                                priceEl.style.color = val > stock.myAvg ? 'var(--color-up)' : 'var(--color-down)';
+                                
+                                const pnl = ((val - stock.myAvg) / stock.myAvg) * 100;
+                                const pnlEl = document.getElementById(`pnl-${id}`);
+                                pnlEl.innerText = `${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}%`;
+                                pnlEl.style.color = pnl > 0 ? 'var(--color-up)' : 'var(--color-down)';
+                            }
+                            
+                            if (type === 'volume' && !isNaN(val)) {
+                                s.sellVol = val; 
+                                document.getElementById(`sVol-${id}`).innerText = (val/1000).toFixed(1) + 'k';
+                            }
+                            
+                            // AI 관제 시그널이 켜지면 화면에 강력 경고 애니메이션 출력
+                            if (node.is_anomaly && !s.isSignaling) {
+                                triggerSequence(id, 'SELL');
+                            }
+                        }
+                    });
                 }
-            });
+            } catch (err) {
+                // 서버(7번)가 꺼져있을 때 콘솔 에러 숨김
+            }
         }
 
         initDashboard();
-        setInterval(simulateEngine, 1000); 
+        // 💡 0.5초마다 7번 방송국에서 실시간 데이터를 퍼와서 화면에 꽂아 넣음
+        setInterval(fetchRealtimeData, 500); 
     </script>
 </body>
 </html>

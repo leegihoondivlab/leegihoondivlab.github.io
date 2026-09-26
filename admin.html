@@ -1,0 +1,103 @@
+<!--
+=====================================================================
+📌 파일명: admin.html
+📌 명령어: 브라우저에서 파일 더블클릭으로 실행 (또는 index.html에서 admin 로그인)
+📌 하는일: 
+   1. index.html에서 가입한 고객들의 명단(DB)을 긁어와 표(Table) 형태로 출력합니다.
+   2. 총 가입자 수 통계 및 강제 퇴출(Ban) 시뮬레이션 UI를 제공합니다.
+📌 부품설치: 별도 설치 없음
+=====================================================================
+-->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>DivLab Admin Dashboard</title>
+    <style>
+        :root {
+            --bg-base: #0B0E14; --bg-card: #151924; --bg-inset: #0F1219;
+            --border-color: #2A2E39; --text-main: #D1D5DB; --text-muted: #787B86;
+            --accent: #F6465D; /* 관리자 페이지는 빨간색 포인트 */
+            --color-up: #2EBD85; 
+        }
+
+        body {
+            background-color: var(--bg-base); color: var(--text-main);
+            font-family: 'Pretendard', sans-serif; margin: 0; padding: 30px;
+        }
+
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; margin-bottom: 30px; }
+        .title { font-size: 28px; font-weight: 900; color: #fff; margin: 0;}
+        .stat-badge { background: rgba(46, 189, 133, 0.1); color: var(--color-up); padding: 8px 15px; border-radius: 6px; border: 1px solid rgba(46, 189, 133, 0.3); font-weight: bold;}
+
+        table { width: 100%; border-collapse: collapse; background: var(--bg-card); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        th, td { padding: 15px 20px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { background: var(--bg-inset); color: var(--text-muted); font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+        td { font-size: 15px; color: #fff; }
+        tr:last-child td { border-bottom: none; }
+        
+        .status-active { color: var(--color-up); background: rgba(46,189,133,0.1); padding: 4px 8px; border-radius: 4px; font-size: 12px;}
+        .status-banned { color: var(--accent); background: rgba(246,70,93,0.1); padding: 4px 8px; border-radius: 4px; font-size: 12px;}
+        
+        .btn-ban { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 6px 12px; border-radius: 4px; cursor: pointer; transition: 0.2s;}
+        .btn-ban:hover { background: var(--accent); color: #fff; }
+
+        .empty-state { text-align: center; padding: 50px; color: var(--text-muted); font-size: 16px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1 class="title">🛡️ 최고 관리자 센터 (Admin)</h1>
+        <div class="stat-badge">총 가입 고객: <span id="total-users">0</span> 명</div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>No</th>
+                <th>고객명 (기업명)</th>
+                <th>계정 (이메일)</th>
+                <th>가입 일자</th>
+                <th>구독 상태</th>
+                <th>권한 제어</th>
+            </tr>
+        </thead>
+        <tbody id="user-table-body">
+            <!-- 데이터가 JS로 동적 삽입됩니다 -->
+        </tbody>
+    </table>
+
+    <script>
+        function loadAdminData() {
+            // index.html에서 저장한 가입자 목록을 불러옴
+            const users = JSON.parse(localStorage.getItem('divlab_admin_users')) || [];
+            
+            // 데모 확인을 위해 기본 데이터(더미) 1개 삽입
+            if (users.length === 0) {
+                users.push({ name: "테슬라 퀀트팀 (예시)", email: "quant@tesla.com", date: "2026. 09. 28.", status: "활성 (VIP)" });
+            }
+
+            const tbody = document.getElementById('user-table-body');
+            document.getElementById('total-users').innerText = users.length;
+            tbody.innerHTML = '';
+
+            users.forEach((user, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="color:var(--text-muted);">${index + 1}</td>
+                    <td style="font-weight:bold;">${user.name}</td>
+                    <td style="color:var(--text-muted);">${user.email}</td>
+                    <td>${user.date}</td>
+                    <td><span class="status-active">${user.status}</span></td>
+                    <td><button class="btn-ban" onclick="alert('${user.name} 회원의 접근을 차단하시겠습니까? (준비 중)')">계정 정지</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 페이지 로드 시 즉시 데이터 뿌리기
+        loadAdminData();
+    </script>
+</body>
+</html>
